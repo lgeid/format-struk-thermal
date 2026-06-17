@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generator Struk Thermal V3 (Fitur Lengkap)</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            display: flex;
+            gap: 25px;
+            max-width: 1300px;
+            width: 100%;
+        }
+        /* Form Panel Styling */
+        .form-panel {
+            flex: 1.3;
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        h2, h3 {
+            color: #2c3e50;
+            margin-top: 0;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            font-size: 13px;
+            color: #4a5568;
+        }
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 5px;
+        }
+        .checkbox-group input {
+            width: auto;
+            margin: 0;
+        }
+        .item-list-header {
+            display: flex;
+            gap: 10px;
+            font-weight: bold;
+            font-size: 13px;
+            color: #64748b;
+            margin-bottom: 5px;
+            padding-right: 35px;
+        }
+        .item-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        .item-row input.name { flex: 2; }
+        .item-row input.qty { flex: 0.5; text-align: center; }
+        .item-row input.price { flex: 1; text-align: right; }
+        
+        /* Buttons */
+        button {
+            cursor: pointer;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .btn-add { background-color: #10b981; color: white; margin-top: 5px; }
+        .btn-add:hover { background-color: #059669; }
+        .btn-remove { background-color: #ef4444; color: white; padding: 10px 12px; }
+        .btn-remove:hover { background-color: #dc2626; }
+        
+        .action-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .btn-print { background-color: #3b82f6; color: white; grid-column: span 2; padding: 14px; font-size: 16px; }
+        .btn-print:hover { background-color: #2563eb; }
+        .btn-copy { background-color: #f59e0b; color: white; }
+        .btn-copy:hover { background-color: #d97706; }
+        .btn-download { background-color: #64748b; color: white; }
+        .btn-download:hover { background-color: #475569; }
+
+        /* Notification Toast */
+        #toast {
+            display: none;
+            background-color: #333;
+            color: white;
+            padding: 12px 24px;
+            position: fixed;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 30px;
+            font-size: 14px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+
+        /* Preview Panel Styling */
+        .preview-panel {
+            flex: 0.7;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .receipt {
+            width: 58mm;
+            background: white;
+            padding: 12mm 4mm;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 11px;
+            color: #000;
+            line-height: 1.3;
+        }
+        .receipt-80mm {
+            width: 80mm;
+        }
+        .center { text-align: center; }
+        .right { text-align: right; }
+        .bold { font-weight: bold; }
+        .line {
+            border-top: 1px dashed #000;
+            margin: 6px 0;
+        }
+        .receipt-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .receipt-table td {
+            padding: 2px 0;
+            vertical-align: top;
+        }
+        .flex-space {
+            display: flex;
+            justify-content: space-between;
+        }
+        .paper-selector {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        /* Print Mode Optimization */
+        @media print {
+            body { background: white; padding: 0; margin: 0; }
+            .form-panel, .preview-panel > h2, .paper-selector, .action-buttons, #toast { display: none !important; }
+            .container { width: auto; box-shadow: none; }
+            .preview-panel { width: 100%; }
+            .receipt { 
+                width: 100% !important; 
+                box-shadow: none; 
+                padding: 0; 
+                margin: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- PANEL INPUT FORM -->
+    <div class="form-panel">
+        <h2>Kontrol Data Struk (V3)</h2>
+        
+        <!-- Informasi Toko -->
+        <div class="form-row">
+            <div class="form-group">
+                <label>Nama Toko</label>
+                <input type="text" id="input-toko" value="WARUNG MAJU JAYA" oninput="updateReceipt()">
+            </div>
+            <div class="form-group">
+                <label>No. Telepon</label>
+                <input type="text" id="input-telp" value="0812-9999-8888" oninput="updateReceipt()">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Alamat Toko</label>
+                <input type="text" id="input-alamat" value="Jl. Suka Menanti No. 12, Bandung" oninput="updateReceipt()">
+            </div>
+            <div class="form-group">
+                <label>NPWP Toko</label>
+                <input type="text" id="input-npwp" value="01.234.567.8-999.000" oninput="updateReceipt()">
+            </div>
+        </div>
+
+        <!-- Pengaturan Waktu & Kasir -->
+        <div class="form-row">
+            <div class="form-group">
+                <label>Tanggal & Jam</label>
+                <div style="display: flex; gap: 5px;">
+                    <input type="date" id="input-tgl-manual" onchange="updateReceipt()" disabled>
+                    <input type="time" id="input-jam-manual" onchange="updateReceipt()" disabled>
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="input-waktu-otomatis" checked onchange="toggleWaktuOtomatis()">
+                    <label for="input-waktu-otomatis" style="font-weight: normal; font-size: 12px; margin: 0;">Otomatis (Waktu Sistem)</label>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Nama Kasir</label>
+                <input type="text" id="input-kasir" value="Andi" oninput="updateReceipt()">
+            </div>
+        </div>
+
+        <!-- Data Customer -->
+        <div class="form-row">
+            <div class="form-group">
+                <label>Nama Customer</label>
+                <input type="text" id="input-customer" value="Bpk. Joko" placeholder="Kosongkan jika umum" oninput="updateReceipt()">
+            </div>
+            <div class="form-group">
+                <label>No. Member</label>
+                <input type="text" id="input-member" value="MBR-99211" placeholder="Kosongkan jika bukan member" oninput="updateReceipt()">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Poin Customer</label>
+                <input type="number" id="input-poin" value="150" placeholder="0" oninput="updateReceipt()">
+            </div>
+            <div class="form-group">
+                <label>Jenis Pembayaran</label>
+                <select id="input-jenis-bayar" onchange="updateReceipt()">
+                    <option value="TUNAI" selected>TUNAI</option>
+                    <option value="NON TUNAI">NON TUNAI (QRIS/DEBIT)</option>
+                    <option value="KREDIT">KREDIT / TEMPO</option>
+                </select>
+            </div>
+        </div>
+        
+        <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 15px 0;">
+        
+        <h3>Daftar Produk / Barang</h3>
+        <div class="item-list-header">
+            <span style="flex: 2;">Nama Barang</span>
+            <span style="flex: 0.5; text-align: center;">Qty</span>
+            <span style="flex: 1; text-align: right;">Harga (Rp)</span>
+        </div>
+        
+        <div id="items-container">
+            <div class="item-row">
+                <input type="text" class="name" value="Nasi Goreng Spesial" placeholder="Produk A" oninput="updateReceipt()">
+                <input type="number" class="qty" value="2" placeholder="1" oninput="updateReceipt()">
+                <input type="number" class="price" value="22000" placeholder="0" oninput="updateReceipt()">
+                <button class="btn-remove" onclick="removeItem(this)">✕</button>
+            </div>
+            <div class="item-row">
+                <input type="text" class="name" value="Es Teh Manis" placeholder="Produk B" oninput="updateReceipt()">
+                <input type="number" class="qty" value="2" placeholder="1" oninput="updateReceipt()">
+                <input type="number" class="price" value="5000" placeholder="0" oninput="updateReceipt()">
+                <button class="btn-remove" onclick="removeItem(this)">✕</button>
+            </div>
+        </div>
+        
+        <button class="btn-add" onclick="addItem()">+ Tambah Baris Barang</button>
+
+        <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 15px 0;">
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label>Diskon Struk (Rp)</label>
+                <input type="number" id="input-diskon" value="5000" oninput="updateReceipt()">
+            </div>
+            <div class="form-group">
+                <label>Jumlah Pembayaran / Uang Masuk (Rp)</label>
+                <input type="number" id="input-bayar" value="60000" oninput="updateReceipt()">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Pesan Kaki Struk (Footer)</label>
+            <input type="text" id="input-footer" value="Terima Kasih, Datang Kembali!" oninput="updateReceipt()">
+        </div>
+
+        <!-- FITUR AKSI UTAMA -->
+        <div class="action-buttons">
+            <button class="btn-print" onclick="window.print()">🖨️ Cetak ke Printer Thermal</button>
+            <button class="btn-copy" onclick="copyReceiptText()">📋 Salin Format Teks</button>
+            <button class="btn-download" onclick="downloadReceiptText()">💾 Download File Struk (.txt)</button>
+        </div>
+    </div>
+
+    <!-- PANEL LIVE PREVIEW -->
+    <div class="preview-panel">
+        <h2>Live Preview</h2>
+        
+        <div class="paper-selector">
+            <span style="font-size: 14px; font-weight: bold; color: #4a5568;">Ukuran Lebar Kertas:</span>
+            <label><input type="radio" name="paper-size" value="58" checked onclick="changePaperSize(58)"> 58mm</label>
+            <label><input type="radio" name="paper-size" value="80" onclick="changePaperSize(80)"> 80mm</label>
+        </div>
+
+        <div class="receipt" id="receipt">
+            <!-- Header -->
+            <div class="center bold" id="print-toko" style="font-size: 13px;">WARUNG MAJU JAYA</div>
+            <div class="center" id="print-alamat">Jl. Suka Menanti No. 12, Bandung</div>
+            <div class="center" id="print-telp">Telp: 0812-9999-8888</div>
+            <div class="center" id="print-npwp" style="font-size: 10px;">NPWP: 01.234.567.8-999.000</div>
+            
+            <div class="line"></div>
+            
+            <!-- Metadata Transaksi & Waktu -->
+            <div class="flex-space">
+                <span id="print-tgl">Tgl: --/--/----</span>
+                <span id="print-jam">Jam: --:--</span>
+            </div>
+            <div class="flex-space">
+                <span>Kasir: <span id="print-kasir">Andi</span></span>
+                <span>No: #99501</span>
+            </div>
+            
+            <!-- Metadata Customer (Kondisional via JS) -->
+            <div id="print-customer-section">
+                <div class="line"></div>
+                <div id="row-print-customer" class="flex-space"><span>Pelanggan:</span> <span id="print-customer">Joko</span></div>
+                <div id="row-print-member" class="flex-space"><span>No Member:</span> <span id="print-member">MBR-99211</span></div>
+                <div id="row-print-poin" class="flex-space"><span>Sisa Poin:</span> <span id="print-poin">150</span></div>
+            </div>
+            
+            <div class="line"></div>
+            
+            <!-- Daftar Item Tabel -->
+            <table class="receipt-table" id="print-items-table">
+                <!-- Diisi otomatis -->
+            </table>
+            
+            <div class="line"></div>
+            
+            <!-- Perhitungan Otomatis -->
+            <div class="flex-space">
+                <span>SUBTOTAL</span>
+                <span id="print-subtotal">Rp 0</span>
+            </div>
+            <div class="flex-space" id="row-print-diskon">
+                <span>DISKON</span>
+                <span id="print-diskon">Rp 0</span>
+            </div>
+            <div class="flex-space bold" style="font-size: 12px; margin-top: 2px;">
+                <span>TOTAL AKHIR</span>
+                <span id="print-total">Rp 0</span>
+            </div>
+            <div class="line"></div>
+            <div class="flex-space">
+                <span id="label-print-bayar">BAYAR (TUNAI)</span>
+                <span id="print-bayar">Rp 0</span>
+            </div>
+            <div class="flex-space bold" id="row-print-kembalian">
+                <span id="label-print-kembalian">KEMBALIAN</span>
+                <span id="print-kembalian">Rp 0</span>
+            </div>
+            
+            <div class="line"></div>
+            
+            <!-- Footer -->
+            <div class="center" id="print-footer">Terima Kasih, Datang Kembali!</div>
+            <div class="center" style="margin-top: 6px; font-size: 9px; color: #555;">Sistem Kasir v3.0</div>
+        </div>
+    </div>
+</div>
+
+<!-- Notifikasi Pop-up -->
+<div id="toast">Teks Berhasil Disalin!</div>
+
+<script>
+    // Atur status input Tanggal/Jam Manual berdasarkan checkbox Otomatis
+    function toggleWaktuOtomatis() {
+        const isOtomatis = document.getElementById('input-waktu-otomatis').checked;
+        document.getElementById('input-tgl-manual').disabled = isOtomatis;
+        document.getElementById('input-jam-manual').disabled = isOtomatis;
+        
+        if (!isOtomatis) {
+            // Set default input manual ke hari ini jika dinonaktifkan
+            const sekarang = new Date();
+            document.getElementById('input-tgl-manual').value = sekarang.toISOString().split('T')[0];
+            document.getElementById('input-jam-manual').value = sekarang.toTimeString().split(' ')[0].substring(0, 5);
+        }
+        updateReceipt();
+    }
+
+    // Ganti lebar kertas live preview
+    function changePaperSize(size) {
+        const receipt = document.getElementById('receipt');
+        if (size === 80) {
+            receipt.classList.add('receipt-80mm');
+        } else {
+            receipt.classList.remove('receipt-80mm');
+        }
+        updateReceipt();
+    }
+
+    function addItem() {
+        const container = document.getElementById('items-container');
+        const div = document.createElement('div');
+        div.className = 'item-row';
+        div.innerHTML = `
+            <input type="text" class="name" placeholder="Nama Produk" oninput="updateReceipt()">
+            <input type="number" class="qty" value="1" placeholder="1" oninput="updateReceipt()">
+            <input type="number" class="price" value="0" placeholder="0" oninput="updateReceipt()">
+            <button class="btn-remove" onclick="removeItem(this)">✕</button>
+        `;
+        container.appendChild(div);
+        updateReceipt();
+    }
+
+    function removeItem(btn) {
+        btn.parentElement.remove();
+        updateReceipt();
+    }
+
+    function formatRupiah(angka) {
+        return parseInt(angka).toLocaleString('id-ID');
+    }
+
+    // Fungsi Utama: Hitung & Sinkronisasi Live Preview
+    function updateReceipt() {
+        // Teks Identitas Toko
+        document.getElementById('print-toko').innerText = document.getElementById('input-toko').value.toUpperCase();
+        document.getElementById('print-alamat').innerText = document.getElementById('input-alamat').value;
+        document.getElementById('print-telp').innerText = "Telp: " + document.getElementById('input-telp').value;
+        
+        const npwpVal = document.getElementById('input-npwp').value;
+        const printNpwp = document.getElementById('print-npwp');
+        if(npwpVal) {
+            printNpwp.style.display = 'block';
+            printNpwp.innerText = "NPWP: " + npwpVal;
+        } else {
+            printNpwp.style.display = 'none';
+        }
+
+        document.getElementById('print-kasir').innerText = document.getElementById('input-kasir').value;
+        document.getElementById('print-footer').innerText = document.getElementById('input-footer').value;
+
+        // Logika Waktu (Otomatis vs Manual)
+        const isOtomatis = document.getElementById('input-waktu-otomatis').checked;
+        let tglStr = "", jamStr = "";
+        
+        if (isOtomatis) {
+            const sekarang = new Date();
+            tglStr = sekarang.getDate().toString().padStart(2, '0') + '/' + (sekarang.getMonth() + 1).toString().padStart(2, '0') + '/' + sekarang.getFullYear();
+            jamStr = sekarang.getHours().toString().padStart(2, '0') + ':' + sekarang.getMinutes().toString().padStart(2, '0');
+        } else {
+            const tglManual = document.getElementById('input-tgl-manual').value;
+            const jamManual = document.getElementById('input-jam-manual').value;
+            
+            if(tglManual) {
+                const parts = tglManual.split('-');
+                tglStr = parts[2] + '/' + parts[1] + '/' + parts[0];
+            } else { tglStr = '--/--/----'; }
+            jamStr = jamManual ? jamManual : '--:--';
+        }
+        document.getElementById('print-tgl').innerText = "Tgl: " + tglStr;
+        document.getElementById('print-jam').innerText = "Jam: " + jamStr;
+
+        // Logika Customer, Member & Poin
+        const custName = document.getElementById('input-customer').value;
+        const membNo = document.getElementById('input-member').value;
+        const poinVal = document.getElementById('input-poin').value;
+        const custSection = document.getElementById('print-customer-section');
+
+        if(!custName && !membNo && !poinVal) {
+            custSection.style.display = 'none';
+        } else {
+            custSection.style.display = 'block';
+            
+            const rowCust = document.getElementById('row-print-customer');
+            if(custName) { rowCust.style.display = 'flex'; document.getElementById('print-customer').innerText = custName; }
+            else { rowCust.style.display = 'none'; }
+            
+            const rowMemb = document.getElementById('row-print-member');
+            if(membNo) { rowMemb.style.display = 'flex'; document.getElementById('print-member').innerText = membNo; }
+            else { rowMemb.style.display = 'none'; }
+            
+            const rowPoin = document.getElementById('row-print-poin');
+            if(poinVal !== "") { rowPoin.style.display = 'flex'; document.getElementById('print-poin').innerText = formatRupiah(poinVal); }
+            else { rowPoin.style.display = 'none'; }
+        }
+
+        // Hitung Tabel Barang
+        const itemRows = document.querySelectorAll('.item-row');
+        const tablePrint = document.getElementById('print-items-table');
+        tablePrint.innerHTML = '';
+
+        let subtotalKeseluruhan = 0;
+        itemRows.forEach(row => {
+            const name = row.querySelector('.name').value || 'Produk';
+            const qty = parseInt(row.querySelector('.qty').value) || 0;
+            const price = parseInt(row.querySelector('.price').value) || 0;
+            const subtotalItem = qty * price;
+            subtotalKeseluruhan += subtotalItem;
+
+            const tr1 = document.createElement('tr');
+            tr1.innerHTML = `<td colspan="2" style="word-break: break-all;">${name}</td>`;
+            tablePrint.appendChild(tr1);
+
+            const tr2 = document.createElement('tr');
+            tr2.innerHTML = `
+                <td style="padding-left: 8px; color: #333;">${qty} x ${formatRupiah(price)}</td>
+                <td class="right">${formatRupiah(subtotalItem)}</td>
+            `;
+            tablePrint.appendChild(tr2);
+        });
+
+        // Hitung Total Finansial & Jenis Pembayaran
+        const diskon = parseInt(document.getElementById('input-diskon').value) || 0;
+        const totalAkhir = Math.max(0, subtotalKeseluruhan - diskon);
+        const bayar = parseInt(document.getElementById('input-bayar').value) || 0;
+        const kembalian = bayar - totalAkhir;
+        const jenisBayar = document.getElementById('input-jenis-bayar').value;
+
+        document.getElementById('print-subtotal').innerText = "Rp " + formatRupiah(subtotalKeseluruhan);
+        
+        const rowDiskon = document.getElementById('row-print-diskon');
+        if(diskon > 0) {
+            rowDiskon.style.display = 'flex';
+            document.getElementById('print-diskon').innerText = "-Rp " + formatRupiah(diskon);
+        } else {
+            rowDiskon.style.display = 'none';
+        }
+
+        document.getElementById('print-total').innerText = "Rp " + formatRupiah(totalAkhir);
+        document.getElementById('label-print-bayar').innerText = "BAYAR (" + jenisBayar + ")";
+        document.getElementById('print-bayar').innerText = "Rp " + formatRupiah(bayar);
+
+        // Pengkondisian Teks Kembalian berdasarkan Jenis Pembayaran
+        const labelKembalian = document.getElementById('label-print-kembalian');
+        const printKembalian = document.getElementById('print-kembalian');
+        
+        if (jenisBayar === "KREDIT") {
+            labelKembalian.innerText = "SISA TAGIHAN";
+            printKembalian.innerText = "Rp " + formatRupiah(kembalian < 0 ? Math.abs(kembalian) : 0);
+        } else {
+            labelKembalian.innerText = "KEMBALIAN";
+            printKembalian.innerText = "Rp " + formatRupiah(kembalian < 0 ? 0 : kembalian);
+        }
+    }
+
+    // ALGORITMA MONOSPACE PADDING UNTUK SALIN / DOWNLOAD TEXT MURNI
+    function padLine(left, right, maxChar = 32) {
+        let spaceNeeded = maxChar - left.length - right.length;
+        if (spaceNeeded < 0) spaceNeeded = 1;
+        return left + ' '.repeat(spaceNeeded) + right;
+    }
+
+    function centerText(text, maxChar = 32) {
+        if (text.length >= maxChar) return text.substring(0, maxChar);
+        let padding = Math.floor((maxChar - text.length) / 2);
+        return ' '.repeat(padding) + text;
+    }
+
+    // Fungsi Membuat Teks Struk Murni (.txt)
+    function buildPlainTextReceipt() {
+        const is80mm = document.querySelector('input[name="paper-size"]:checked').value === "80";
+        const maxChar = is80mm ? 42 : 32;
+        
+        let txt = "";
+        txt += centerText(document.getElementById('input-toko').value.toUpperCase(), maxChar) + "\n";
+        txt += centerText(document.getElementById('input-alamat').value, maxChar) + "\n";
+        txt += centerText("Telp: " + document.getElementById('input-telp').value, maxChar) + "\n";
+        
+        const npwp = document.getElementById('input-npwp').value;
+        if(npwp) txt += centerText("NPWP: " + npwp, maxChar) + "\n";
+        
+        txt += "-".repeat(maxChar) + "\n";
+
+        txt += padLine(document.getElementById('print-tgl').innerText, document.getElementById('print-jam').innerText, maxChar) + "\n";
+        txt += padLine("Kasir: " + document.getElementById('input-kasir').value, "No: #99501", maxChar) + "\n";
+        
+        // Customer metadata text mode
+        const custName = document.getElementById('input-customer').value;
+        const membNo = document.getElementById('input-member').value;
+        const poinVal = document.getElementById('input-poin').value;
+        
+        if(custName || membNo || poinVal) {
+            txt += "-".repeat(maxChar) + "\n";
+            if(custName) txt += padLine("Pelanggan:", custName, maxChar) + "\n";
+            if(membNo) txt += padLine("No Member:", membNo, maxChar) + "\n";
+            if(poinVal !== "") txt += padLine("Sisa Poin:", formatRupiah(poinVal), maxChar) + "\n";
+        }
+
+        txt += "-".repeat(maxChar) + "\n";
+
+        let subtotalKeseluruhan = 0;
+        const itemRows = document.querySelectorAll('.item-row');
+        itemRows.forEach(row => {
+            const name = row.querySelector('.name').value || 'Produk';
+            const qty = parseInt(row.querySelector('.qty').value) || 0;
+            const price = parseInt(row.querySelector('.price').value) || 0;
+            const subtotalItem = qty * price;
+            subtotalKeseluruhan += subtotalItem;
+
+            txt += name.substring(0, maxChar) + "\n";
+            txt += padLine(`  ${qty} x ${formatRupiah(price)}`, formatRupiah(subtotalItem), maxChar) + "\n";
+        });
+
+        txt += "-".repeat(maxChar) + "\n";
+
+        const diskon = parseInt(document.getElementById('input-diskon').value) || 0;
+        const totalAkhir = Math.max(0, subtotalKeseluruhan - diskon);
+        const bayar = parseInt(document.getElementById('input-bayar').value) || 0;
+        const kembalian = bayar - totalAkhir;
+        const jenisBayar = document.getElementById('input-jenis-bayar').value;
+
+        txt += padLine("SUBTOTAL", formatRupiah(subtotalKeseluruhan), maxChar) + "\n";
+        if (diskon > 0) txt += padLine("DISKON", "-" + formatRupiah(diskon), maxChar) + "\n";
+        txt += padLine("TOTAL AKHIR", formatRupiah(totalAkhir), maxChar) + "\n";
+        
+        txt += "-".repeat(maxChar) + "\n";
+        txt += padLine("BAYAR (" + jenisBayar + ")", formatRupiah(bayar), maxChar) + "\n";
+        
+        if(jenisBayar === "KREDIT") {
+            txt += padLine("SISA TAGIHAN", formatRupiah(kembalian < 0 ? Math.abs(kembalian) : 0), maxChar) + "\n";
+        } else {
+            txt += padLine("KEMBALIAN", formatRupiah(kembalian < 0 ? 0 : kembalian), maxChar) + "\n";
+        }
+        
+        txt += "-".repeat(maxChar) + "\n";
+        txt += centerText(document.getElementById('input-footer').value, maxChar) + "\n";
+        txt += centerText("Terima Kasih", maxChar) + "\n";
+        
+        return txt;
+    }
+
+    function copyReceiptText() {
+        const textData = buildPlainTextReceipt();
+        navigator.clipboard.writeText(textData).then(() => {
+            showToast("Format teks berhasil disalin!");
+        }).catch(err => {
+            alert("Gagal menyalin teks: " + err);
+        });
+    }
+
+    function downloadReceiptText() {
+        const textData = buildPlainTextReceipt();
+        const blob = new Blob([textData], { type: 'text/plain;charset=utf-8' });
+        const element = document.createElement('a');
+        element.href = URL.createObjectURL(blob);
+        element.download = "struk_V3_" + Date.now() + ".txt";
+        document.body.appendChild(element);
+        element.click();
+        document.body.removeChild(element);
+        showToast("File .txt berhasil didownload!");
+    }
+
+    function showToast(message) {
+        const toast = document.getElementById("toast");
+        toast.innerText = message;
+        toast.style.display = "block";
+        setTimeout(() => { toast.style.display = "none"; }, 2500);
+    }
+
+    window.onload = function() {
+        updateReceipt();
+    }
+</script>
+
+</body>
+</html>
