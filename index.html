@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generator Struk Thermal V3 (Fitur Lengkap)</title>
+    <title>Generator Struk Thermal V4 (Bluetooth Support)</title>
     <style>
         * {
             box-sizing: border-box;
@@ -113,10 +113,23 @@
         }
         .btn-print { background-color: #3b82f6; color: white; grid-column: span 2; padding: 14px; font-size: 16px; }
         .btn-print:hover { background-color: #2563eb; }
+        .btn-bt-connect { background-color: #4f46e5; color: white; grid-column: span 2; padding: 12px; margin-bottom: 5px;}
+        .btn-bt-connect:hover { background-color: #4338ca; }
+        .btn-bt-print { background-color: #06b6d4; color: white; grid-column: span 2; padding: 12px; margin-bottom: 15px;}
+        .btn-bt-print:hover { background-color: #0891b2; }
+        .btn-bt-print:disabled { background-color: #cbd5e1; cursor: not-allowed; color: #94a3b8; }
         .btn-copy { background-color: #f59e0b; color: white; }
         .btn-copy:hover { background-color: #d97706; }
         .btn-download { background-color: #64748b; color: white; }
         .btn-download:hover { background-color: #475569; }
+
+        .bt-section {
+            background-color: #f8fafc;
+            border: 1px dashed #6366f1;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
 
         /* Notification Toast */
         #toast {
@@ -183,7 +196,7 @@
         /* Print Mode Optimization */
         @media print {
             body { background: white; padding: 0; margin: 0; }
-            .form-panel, .preview-panel > h2, .paper-selector, .action-buttons, #toast { display: none !important; }
+            .form-panel, .preview-panel > h2, .paper-selector, .action-buttons, .bt-section, #toast { display: none !important; }
             .container { width: auto; box-shadow: none; }
             .preview-panel { width: 100%; }
             .receipt { 
@@ -200,7 +213,7 @@
 <div class="container">
     <!-- PANEL INPUT FORM -->
     <div class="form-panel">
-        <h2>Kontrol Data Struk (V3)</h2>
+        <h2>Kontrol Data Struk (V4 - Bluetooth Support)</h2>
         
         <!-- Informasi Toko -->
         <div class="form-row">
@@ -312,9 +325,19 @@
             <input type="text" id="input-footer" value="Terima Kasih, Datang Kembali!" oninput="updateReceipt()">
         </div>
 
-        <!-- FITUR AKSI UTAMA -->
+        <!-- PANEL BLUETOOTH PRINTER -->
+        <div class="bt-section">
+            <h4 style="margin: 0 0 10px 0; color: #4338ca;">Koneksi Direct Bluetooth Mini Printer</h4>
+            <button class="btn-bt-connect" id="btn-bt-status" onclick="connectBluetooth()">🔗 Hubungkan Printer Bluetooth</button>
+            <button class="btn-bt-print" id="btn-bt-print" onclick="printBluetooth()" disabled>⚡ Cetak via Bluetooth (Direct)</button>
+            <small style="color: #64748b; font-size: 11px; display: block; line-height: 1.4;">
+                *Catatan: Fitur ini menggunakan Web Bluetooth API. Pastikan menggunakan Google Chrome/Edge (Android/PC) dan aplikasi dibuka via HTTPS atau file lokal.
+            </small>
+        </div>
+
+        <!-- FITUR AKSI STANDAR -->
         <div class="action-buttons">
-            <button class="btn-print" onclick="window.print()">🖨️ Cetak ke Printer Thermal</button>
+            <button class="btn-print" onclick="window.print()">🖨️ Cetak System (Kabel/Wifi/PDF)</button>
             <button class="btn-copy" onclick="copyReceiptText()">📋 Salin Format Teks</button>
             <button class="btn-download" onclick="downloadReceiptText()">💾 Download File Struk (.txt)</button>
         </div>
@@ -349,7 +372,7 @@
                 <span>No: #99501</span>
             </div>
             
-            <!-- Metadata Customer (Kondisional via JS) -->
+            <!-- Metadata Customer -->
             <div id="print-customer-section">
                 <div class="line"></div>
                 <div id="row-print-customer" class="flex-space"><span>Pelanggan:</span> <span id="print-customer">Joko</span></div>
@@ -393,7 +416,7 @@
             
             <!-- Footer -->
             <div class="center" id="print-footer">Terima Kasih, Datang Kembali!</div>
-            <div class="center" style="margin-top: 6px; font-size: 9px; color: #555;">Sistem Kasir v3.0</div>
+            <div class="center" style="margin-top: 6px; font-size: 9px; color: #555;">Sistem Kasir v4.0</div>
         </div>
     </div>
 </div>
@@ -402,6 +425,91 @@
 <div id="toast">Teks Berhasil Disalin!</div>
 
 <script>
+    // GLOBAL VARIABEL UNTUK BLUETOOTH PRINTER
+    let printCharacteristic = null;
+
+    // FUNGSI HUBUNGKAN KE PRINTER BLUETOOTH VIA WEB BLUETOOTH API
+    async function connectBluetooth() {
+        try {
+            showToast("Membuka pencarian Bluetooth...");
+            
+            // Mencari perangkat bluetooth yang memiliki servis penulisan data printer (GATT)
+            // Menggunakan acceptAllDevices agar kompatibel dengan berbagai merk printer thermal murah (Gedget, BellaV, dsb)
+            const device = await navigator.bluetooth.requestDevice({
+                acceptAllDevices: true,
+                optionalServices: [
+                    "0000fff0-0000-1000-8000-00805f9b34fb", // Karakteristik UUID Printer Thermal Umum tipe A
+                    "0000ff00-0000-1000-8000-00805f9b34fb", // Karakteristik UUID Printer Thermal Umum tipe B
+                    "49535343-fe7d-4ae5-8fa9-9fafd205e455"  // UUID Serial Port Adapter umum
+                ]
+            });
+
+            showToast("Menghubungkan ke: " + device.name);
+            const server = await device.gatt.connect();
+            
+            // Mencari servis utama yang tersedia di mesin printer thermal
+            const services = await server.getPrimaryServices();
+            let foundService = null;
+            
+            for (let service of services) {
+                const characteristics = await service.getCharacteristics();
+                // Cari karakteristik yang bisa menerima perintah WRITE / Kirim Data teks murni
+                for (let char of characteristics) {
+                    if (char.properties.write || char.properties.writeWithoutResponse) {
+                        printCharacteristic = char;
+                        foundService = service;
+                        break;
+                    }
+                }
+                if (printCharacteristic) break;
+            }
+
+            if (printCharacteristic) {
+                document.getElementById('btn-bt-status').innerText = "🟢 Terhubung: " + device.name;
+                document.getElementById('btn-bt-status').style.backgroundColor = "#10b981";
+                document.getElementById('btn-bt-print').disabled = false;
+                showToast("Printer Bluetooth sukses dipasangkan!");
+            } else {
+                throw new Error("Printer terhubung, tapi jalur pengiriman teks (Write Characteristic) tidak ditemukan.");
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Koneksi Bluetooth gagal: " + error.message + "\n\nPastikan Bluetooth HP/Laptop aktif, printer menyala, dan Anda menggunakan Google Chrome/Edge.");
+        }
+    }
+
+    // FUNGSI LOGIKA CETAK DATA VIA BLUETOOTH (KIRIM RAW ESC/POS CHUNKS)
+    async function printBluetooth() {
+        if (!printCharacteristic) {
+            alert("Printer belum terhubung! Silakan klik tombol 'Hubungkan Printer Bluetooth' terlebih dahulu.");
+            return;
+        }
+
+        try {
+            showToast("Memproses cetak teks...");
+            let textData = buildPlainTextReceipt();
+            
+            // Perintah ESC/POS dasar untuk mengumpan kertas kosong di akhir cetakan biar bisa disobek
+            textData += "\n\n\n\n"; 
+
+            // Melakukan encoding teks string menjadi unit data byte (Uint8Array) berbasis ASCII/UTF-8
+            const encoder = new TextEncoder();
+            const bytes = encoder.encode(textData);
+
+            // Karena batasan transfer Bluetooth Low Energy (BLE), data dipotong menjadi potongan kecil (chunks) 20 bytes
+            const maxChunk = 20;
+            for (let i = 0; i < bytes.length; i += maxChunk) {
+                const chunk = bytes.slice(i, i + maxChunk);
+                await printCharacteristic.writeValueWithoutResponse(chunk);
+                // Berikan delay milidetik sangat singkat agar buffer hardware printer thermal tidak kepenuhan (overflow)
+                await new Promise(resolve => setTimeout(resolve, 35));
+            }
+            showToast("Cetak Struk Selesai!");
+        } catch (error) {
+            alert("Gagal mengirim perintah cetak: " + error.message);
+        }
+    }
+
     // Atur status input Tanggal/Jam Manual berdasarkan checkbox Otomatis
     function toggleWaktuOtomatis() {
         const isOtomatis = document.getElementById('input-waktu-otomatis').checked;
@@ -409,7 +517,6 @@
         document.getElementById('input-jam-manual').disabled = isOtomatis;
         
         if (!isOtomatis) {
-            // Set default input manual ke hari ini jika dinonaktifkan
             const sekarang = new Date();
             document.getElementById('input-tgl-manual').value = sekarang.toISOString().split('T')[0];
             document.getElementById('input-jam-manual').value = sekarang.toTimeString().split(' ')[0].substring(0, 5);
@@ -477,7 +584,7 @@
         if (isOtomatis) {
             const sekarang = new Date();
             tglStr = sekarang.getDate().toString().padStart(2, '0') + '/' + (sekarang.getMonth() + 1).toString().padStart(2, '0') + '/' + sekarang.getFullYear();
-            jamStr = sekarang.getHours().toString().padStart(2, '0') + ':' + sekarang.getMinutes().toString().padStart(2, '0');
+            jamStr = sekarang.getHours().toString().padStart(2, '0') + ':' + ThermalPadZero(sekarang.getMinutes());
         } else {
             const tglManual = document.getElementById('input-tgl-manual').value;
             const jamManual = document.getElementById('input-jam-manual').value;
@@ -561,7 +668,6 @@
         document.getElementById('label-print-bayar').innerText = "BAYAR (" + jenisBayar + ")";
         document.getElementById('print-bayar').innerText = "Rp " + formatRupiah(bayar);
 
-        // Pengkondisian Teks Kembalian berdasarkan Jenis Pembayaran
         const labelKembalian = document.getElementById('label-print-kembalian');
         const printKembalian = document.getElementById('print-kembalian');
         
@@ -574,7 +680,11 @@
         }
     }
 
-    // ALGORITMA MONOSPACE PADDING UNTUK SALIN / DOWNLOAD TEXT MURNI
+    function ThermalPadZero(num) {
+        return num.toString().padStart(2, '0');
+    }
+
+    // ALGORITMA MONOSPACE PADDING UNTUK SALIN / DOWNLOAD / BLUETOOTH TEXT MURNI
     function padLine(left, right, maxChar = 32) {
         let spaceNeeded = maxChar - left.length - right.length;
         if (spaceNeeded < 0) spaceNeeded = 1;
@@ -587,7 +697,7 @@
         return ' '.repeat(padding) + text;
     }
 
-    // Fungsi Membuat Teks Struk Murni (.txt)
+    // Fungsi Membuat Teks Struk Murni (.txt / Bluetooth Data)
     function buildPlainTextReceipt() {
         const is80mm = document.querySelector('input[name="paper-size"]:checked').value === "80";
         const maxChar = is80mm ? 42 : 32;
@@ -605,7 +715,6 @@
         txt += padLine(document.getElementById('print-tgl').innerText, document.getElementById('print-jam').innerText, maxChar) + "\n";
         txt += padLine("Kasir: " + document.getElementById('input-kasir').value, "No: #99501", maxChar) + "\n";
         
-        // Customer metadata text mode
         const custName = document.getElementById('input-customer').value;
         const membNo = document.getElementById('input-member').value;
         const poinVal = document.getElementById('input-poin').value;
@@ -674,7 +783,7 @@
         const blob = new Blob([textData], { type: 'text/plain;charset=utf-8' });
         const element = document.createElement('a');
         element.href = URL.createObjectURL(blob);
-        element.download = "struk_V3_" + Date.now() + ".txt";
+        element.download = "struk_V4_BT_" + Date.now() + ".txt";
         document.body.appendChild(element);
         element.click();
         document.body.removeChild(element);
